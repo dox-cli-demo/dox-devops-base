@@ -1,0 +1,16 @@
+name: DOX CLI - Helm Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: dox-runners
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      # Step 3: DOX Action for helm build and push
+      - name: dox-cli helm release
+        run: |
+          dox helm template package push
