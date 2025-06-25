@@ -1,0 +1,101 @@
+configure: |
+  dox export APP_GITOPS_VARIABLES
+
+template:
+  folder: "${DOX_CUSTOM_DIR}/action/templates/gitops" # ${template_folder} will be resolved path of the template folder 
+  variables:
+    BUILD_VERSION: "${BUILD_VERSION}"
+    APPLICATION_NAME: "${APPLICATION_NAME:-$GIT_REPOSITORY_NAME}"
+
+    CONFIG_MAP_NAME: "${CONFIG_MAP_NAME:-}"
+    CONFIG_MAP_MOUNT_PATH: "${CONFIG_MAP_MOUNT_PATH:-}"
+
+    SECRET_NAME: "${SECRET_NAME:-}"
+    SECRET_MOUNT_PATH: "${SECRET_MOUNT_PATH:-}"
+
+    PVC_NAME: "${PVC_NAME:-}"
+    PVC_MOUNT_PATH: "${PVC_MOUNT_PATH:-}"
+
+actions:
+  update-image-tag: |
+    #!/bin/bash
+
+    set -euo pipefail
+
+    echo "______"
+    echo "gitops-argocd-values.yaml"
+    cat "${template_folder}/gitops-argocd-values.yaml"
+    echo "______"
+
+    #---------------------GIT CLONE--------------------------#
+
+    # Configuration
+    TMP_DIR=$(mktemp -d -t gitops-XXXXXXXXXX)
+    STAGE="${DEPLOYMENT_STAGE:-dev}"
+    VALUES_FILE="argo-apps/values-${STAGE}.yaml"
+    APP_NAME="$GIT_REPOSITORY_NAME"
+    VERSION="$BUILD_VERSION"
+
+    echo "📁 Created temp folder: $TMP_DIR"
+    echo "🔄 Cloning GitOps repo..."
+    git clone --depth 1 "https://${GITOPS_PAT}@${GITOPS_REPO}" "$TMP_DIR"
+
+    cd "$TMP_DIR"
+    
+    #---------------------CLEANING YAML--------------------------#
+    CLEANED_FILE="${template_folder}/cleaned-gitops-argocd-values.yaml"
+
+    # Clean null, empty string, and empty objects from the original values file
+    yq -o=json eval '.' "${template_folder}/gitops-argocd-values.yaml" |
+    jq 'def clean:
+          walk(
+            if type == "object"
+            then with_entries(
+              select(
+                .value != null and
+                .value != "" and
+                (if (.value | type == "object") then (.value | length > 0) else true end)
+              )
+            )
+            else .
+            end
+          );
+        clean' |
+    yq -P > "${CLEANED_FILE}"
+
+    #------------------------ PROCESSING ------------------------#
+    # Iterate through each application in CLEANED_FILE
+    for app_name in $(yq eval '.applications[].name' $CLEANED_FILE); do
+      # Check if the application already exists in VALUES_FILE
+      if yq eval ".applications[] | select(.name == \"$app_name\")" $VALUES_FILE > /dev/null; then
+        # If it exists, remove the old application and add the new one
+        echo "Replacing application $app_name in $VALUES_FILE"
+        yq eval -i "
+          .applications |= map(select(.name != \"$app_name\"))
+        " $VALUES_FILE
+        yq eval -i "
+          .applications += (load(\"$CLEANED_FILE\") | .applications[] | select(.name == \"$app_name\"))
+        " $VALUES_FILE
+      else
+        # If it doesn't exist, append the application from CLEANED_FILE to VALUES_FILE
+        echo "Adding new application $app_name to $VALUES_FILE"
+        yq eval -i "
+          .applications += (load(\"$CLEANED_FILE\") | .applications[] | select(.name == \"$app_name\"))
+        " $VALUES_FILE
+      fi
+    done
+    echo "✅ Application has been updated or added in $VALUES_FILE."
+
+    #------------------------ GIT PUSH ------------------------#
+    echo "🚀 Committing and pushing changes..."
+    git config user.name "GitOps Bot"
+    git config user.email "devops@dox-cli.com"
+    git add "$VALUES_FILE"
+
+    if git diff --cached --quiet; then
+      echo "ℹ️ No changes detected. Skipping commit."
+    else
+      git commit -m "🔄 Update image tag for $APP_NAME: $VERSION ($STAGE)"
+      git push
+      echo "✅ Changes pushed into the gitops repository"
+    fi

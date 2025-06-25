@@ -1,0 +1,20 @@
+# Installation and Configuration
+installation:
+  download:
+    # Define version download paths
+    3.17.3:
+     x86_64: "https://get.helm.sh/helm-v3.17.3-linux-amd64.tar.gz"
+     arm64: "https://get.helm.sh/helm-v3.17.3-darwin-arm64.tar.gz"
+
+configuration:
+  default_version: "${HELM_VERSION:-3.17.3}"
+
+  # Environment variable mappings for the installation paths
+  environments:
+    PATH: "${install_dir}"
+
+  # Print the installed version of the package
+  post_configuration_script: |
+    # Print the installed  version
+    helm version
+    whereis helm

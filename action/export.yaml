@@ -1,0 +1,113 @@
+actions:
+  # Call each export action by the prefix dox export-vars
+  global-vars: |
+    dox export BUILD_VERSION
+    dox export GIT_REPOSITORY_NAME
+    dox export GIT_BRANCH_NAME
+    dox export GIT_COMMITTER_NAME
+    dox export GIT_COMMITTER_EMAIL
+    dox export GIT_COMMIT_URL
+    dox export GIT_COMMIT_ID
+    dox export GIT_COMMIT_SHORT_ID
+    dox export GIT_COMMIT_MESSAGE
+    dox export GIT_BRANCH_PREFIX
+    dox export GIT_PIPELINE_URL
+    dox export GIT_REPO_URL
+
+  APP_GITOPS_VARIABLES: | 
+
+    export CONFIG_MAP_NAME="${CONFIG_MAP_NAME:-}"
+    export CONFIG_MAP_MOUNT_PATH="${CONFIG_MAP_MOUNT_PATH:-}"
+    export DEPLOYMENT_STAGE="${DEPLOYMENT_STAGE:-dev}"
+    
+    export SECRET_NAME="${SECRET_NAME:-}"
+    export SECRET_MOUNT_PATH="${SECRET_MOUNT_PATH:-}"
+    
+    export PVC_NAME="${PVC_NAME:-}"
+    export PVC_MOUNT_PATH="${PVC_MOUNT_PATH:-}"
+    
+  FROM_IMAGE: | #Not a Global variable
+    echo "JDK_VERSION is set to $JDK_VERSION"
+    base_image=$(yq eval ".from-images.${JDK_VERSION}" "$DOX_CUSTOM_DIR/action/docker.yaml")
+    echo "From $DOX_CUSTOM_DIR/action/docker.yaml found base_image : $base_image"
+    export FROM_IMAGE="${FROM_IMAGE:-$base_image}"
+    echo "Exported FROM_IMAGE=\"$FROM_IMAGE\""
+
+  # Generate BUILD_VERSION
+  HELM_BUILD_VERSION: |
+    helm_version="1.0.${GITHUB_RUN_NUMBER}"
+    export HELM_BUILD_VERSION="${HELM_BUILD_VERSION:-$helm_version}"
+    echo "Exported HELM_BUILD_VERSION=\"$HELM_BUILD_VERSION\""
+
+  # Generate BUILD_VERSION
+  BUILD_VERSION: |
+    timestamp_version=$(date +"%Y%m%d.%H%M%S" | sed 's/^0//').0
+    export BUILD_VERSION="${BUILD_VERSION:-$timestamp_version}"
+    echo "Exported BUILD_VERSION=\"$BUILD_VERSION\""
+
+  # Git Repository Name
+  GIT_REPOSITORY_NAME: |
+    repo_name=$(basename "$(git config --get remote.origin.url)" .git)
+    export GIT_REPOSITORY_NAME="$repo_name"
+    echo "Exported GIT_REPOSITORY_NAME=\"$GIT_REPOSITORY_NAME\""
+
+  # Git Branch Name
+  GIT_BRANCH_NAME: |
+    branch_name="${GITHUB_REF#refs/heads/}"
+    export GIT_BRANCH_NAME="$branch_name"
+    echo "Exported GIT_BRANCH_NAME=\"$GIT_BRANCH_NAME\""
+
+  # Git Committer Name
+  GIT_COMMITTER_NAME: |
+    committer_name=$(git -C . log -1 --pretty=format:'%an')
+    committer_name="${committer_name// /_}" 
+    export GIT_COMMITTER_NAME="$committer_name"
+    echo "Exported GIT_COMMITTER_NAME=\"$GIT_COMMITTER_NAME\""
+
+  # Git Committer Email
+  GIT_COMMITTER_EMAIL: |
+    committer_email=$(git -C . log -1 --pretty=format:'%ae')
+    export GIT_COMMITTER_EMAIL="$committer_email"
+    echo "Exported GIT_COMMITTER_EMAIL=\"$GIT_COMMITTER_EMAIL\""
+
+  # Git Commit URL
+  GIT_COMMIT_URL: |
+    commit_url=$(git config --get remote.origin.url)/commit/$(git rev-parse HEAD)
+    export GIT_COMMIT_URL="$commit_url"
+    echo "Exported GIT_COMMIT_URL=\"$GIT_COMMIT_URL\""
+
+  # Git Commit ID
+  GIT_COMMIT_ID: |
+    commit_id=$(git rev-parse HEAD)
+    export GIT_COMMIT_ID="$commit_id"
+    echo "Exported GIT_COMMIT_ID=\"$GIT_COMMIT_ID\""
+
+  # Short Git Commit ID
+  GIT_COMMIT_SHORT_ID: |
+    short_commit_id=$(git rev-parse --short HEAD)
+    export GIT_COMMIT_SHORT_ID="$short_commit_id"
+    echo "Exported GIT_COMMIT_SHORT_ID=\"$GIT_COMMIT_SHORT_ID\""
+
+  # Git Commit Message
+  GIT_COMMIT_MESSAGE: |
+    commit_message=$(git log -1 --pretty=%B | tr -d '\n' | tr -d "'" | tr -d '"')
+    export GIT_COMMIT_MESSAGE="$commit_message"
+    echo "Exported GIT_COMMIT_MESSAGE=\"$GIT_COMMIT_MESSAGE\""
+
+  # Git Branch Prefix
+  GIT_BRANCH_PREFIX: |
+    branch_prefix=$(git rev-parse --abbrev-ref HEAD | cut -d/ -f1)
+    export GIT_BRANCH_PREFIX="$branch_prefix"
+    echo "Exported GIT_BRANCH_PREFIX=\"$GIT_BRANCH_PREFIX\""
+
+  # Git Pipeline URL
+  GIT_PIPELINE_URL: |
+    pipeline_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+    export GIT_PIPELINE_URL="$pipeline_url"
+    echo "Exported GIT_PIPELINE_URL=\"$GIT_PIPELINE_URL\""
+
+# Git Repo URL
+  GIT_REPO_URL: |
+    repo_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+    export GIT_REPO_URL="$repo_url"
+    echo "Exported GIT_REPO_URL=\"$GIT_REPO_URL\""

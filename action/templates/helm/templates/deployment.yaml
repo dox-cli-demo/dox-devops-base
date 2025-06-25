@@ -1,0 +1,141 @@
+{{- $isConfigMapMounted := and .Values.configmap.name .Values.configmap.mountPath }}
+{{- $isSecretMounted := and .Values.secret.name .Values.secret.mountPath }}
+{{- $isPVCMounted := and .Values.pvc.name .Values.pvc.mountPath }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- if .Values.service.name }}
+  name: {{ .Values.service.name }}
+  {{- else }}
+  name: {{ include "helm-chart.fullname" . }}
+  {{- end }}
+  labels:
+    {{- include "helm-chart.labels" . | nindent 4 }}
+
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "helm-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "helm-chart.selectorLabels" . | nindent 8 }}
+
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      serviceAccountName: {{ include "helm-chart.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      containers:
+        - name: {{ .Values.service.name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: IMAGE_VERSION
+              value: "{{ .Values.image.tag }}"
+
+          envFrom:
+            {{- if and (not $isConfigMapMounted) .Values.configmap.name }}
+            - configMapRef:
+                name: {{ .Values.configmap.name }}
+            {{- end }}
+            {{- if and (not $isSecretMounted) .Values.secret.name }}
+            - secretRef:
+                name: {{ .Values.secret.name }}
+            {{- end }}
+
+          ports:
+            - name: defaulthttp
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          livenessProbe:
+            initialDelaySeconds: {{ .Values.healthCheck.liveness.delay }}
+            failureThreshold: 5
+            periodSeconds: 8
+            successThreshold: 1
+            timeoutSeconds: 2
+            httpGet:
+              path: {{ .Values.healthCheck.liveness.path }}
+              port: {{ .Values.healthCheck.port }}
+
+          readinessProbe:
+            initialDelaySeconds: {{ .Values.healthCheck.readiness.delay }}
+            failureThreshold: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+            httpGet:
+              path: {{ .Values.healthCheck.readiness.path }}
+              port: {{ .Values.healthCheck.port }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          volumeMounts:
+            {{- if $isPVCMounted }}
+            - name: pvc-volume
+              mountPath: {{ .Values.pvc.mountPath }}
+            {{- end }}
+            {{- if $isConfigMapMounted }}
+            - name: config-volume
+              mountPath: {{ .Values.configmap.mountPath }}
+            {{- end }}
+            {{- if $isSecretMounted }}
+            - name: secret-volume
+              mountPath: {{ .Values.secret.mountPath }}
+            {{- end }}
+
+      volumes:
+        {{- if $isPVCMounted }}
+        - name: pvc-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.name }}
+        {{- end }}
+
+        {{- if $isConfigMapMounted }}
+        - name: config-volume
+          configMap:
+            name: {{ .Values.configmap.name }}
+        {{- end }}
+
+        {{- if $isSecretMounted }}
+        - name: secret-volume
+          secret:
+            secretName: {{ .Values.secret.name }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
