@@ -4,7 +4,7 @@ installation:
     # Define version download paths
     3.17.3:
      x86_64: "https://get.helm.sh/helm-v3.17.3-linux-amd64.tar.gz"
-     arm64: "https://get.helm.sh/helm-v3.17.3-darwin-arm64.tar.gz"
+     arm64: "https://get.helm.sh/helm-v3.17.4-linux-arm64.tar.gz" #Running in mac's ARM docker 
 
 configuration:
   default_version: "${HELM_VERSION:-3.17.3}"
