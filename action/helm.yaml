@@ -1,6 +1,6 @@
 configure: |
   dox configure helm
-  helm registry login -u "$OCI_REG_USER" -p "$OCI_REG_PASSWORD" ${OCI_REG_HOST:-docker.io}
+  helm registry login -u "$oci_reg_user" -p "$oci_reg_password" ${OCI_REG_HOST:-docker.io}
  
   dox export HELM_BUILD_VERSION
   dox export GIT_REPOSITORY_NAME 
@@ -66,6 +66,6 @@ actions:
   push: |
     helm_chart=${GIT_REPOSITORY_NAME}-${HELM_BUILD_VERSION}-helm.tgz
     echo "Helm Chart: $helm_chart"
-    echo "OCI URL: $HELM_OCI_URL"
+    echo "OCI URL: $helm_oci_url"
 
-    helm push $helm_chart $HELM_OCI_URL;
+    helm push $helm_chart $helm_oci_url;
