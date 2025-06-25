@@ -5,7 +5,7 @@ on:
 
 jobs:
   package-base-helm-chart:
-    runs-on: dox-runners
+    runs-on: dox-runner-set
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
