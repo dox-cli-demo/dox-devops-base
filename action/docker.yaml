@@ -6,8 +6,8 @@ configure: |
   dox export FROM_IMAGE
 
 from-images: # This not the part of template but it is used n export.yaml to automate the right image based on $JDK_VERSION version @Ref: /configure/jdk.yaml
-  "17": "eclipse-temurin:17-jre-alpine"
-  "24": "eclipse-temurin:23-jre-alpine"
+  "17": "eclipse-temurin:17-jre"
+  "24": "eclipse-temurin:23-jre"
 
 template:
   folder: "${DOX_CUSTOM_DIR}/action/templates/docker" # ${template_folder} will be resolved path of the template folder 
