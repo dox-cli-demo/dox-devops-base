@@ -1,7 +1,7 @@
 configure: |
   dox configure docker
-  echo "$OCI_REG_PASSWORD" | docker login -u "$OCI_REG_USER" --password-stdin ${OCI_REG_HOST:-docker.io}
-
+  echo "$oci_reg_password" | docker login -u "$oci_reg_user" --password-stdin ${OCI_REG_HOST:-docker.io}
+  
   dox export GIT_REPOSITORY_NAME
   dox export BUILD_VERSION
   dox export FROM_IMAGE
