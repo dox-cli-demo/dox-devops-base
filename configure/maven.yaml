@@ -1,6 +1,6 @@
 # Installation and Configuration
 installation:
-  # List of required dependencies to be installed
+  # List of required dependencies to be installed from https://downloads.apache.org/maven/
   dependencies:
     - jdk
   download:
