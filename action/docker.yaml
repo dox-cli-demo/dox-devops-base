@@ -27,6 +27,7 @@ actions:
     docker push ${docker_image_push_prefix}/${GIT_REPOSITORY_NAME}:${BUILD_VERSION}
   buildx-build: |
     cp ${template_folder}/Dockerfile ./
+    #Cache implementation example
     docker buildx create --use
     docker buildx build \
     --push \
