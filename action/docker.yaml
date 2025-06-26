@@ -25,3 +25,11 @@ actions:
     docker build -t ${docker_image_push_prefix}/${GIT_REPOSITORY_NAME}:${BUILD_VERSION} .
   push: |
     docker push ${docker_image_push_prefix}/${GIT_REPOSITORY_NAME}:${BUILD_VERSION}
+  buildx-build: |
+    cp ${template_folder}/Dockerfile ./
+    docker buildx build \
+    --push \
+    --tag ${docker_image_push_prefix}/${GIT_REPOSITORY_NAME}:${BUILD_VERSION} \
+    --cache-from=type=local,src=/home/runner/dox_resources/buildx-cache \
+    --cache-to=type=local,dest=/home/runner/dox_resources/buildx-cache,mode=max \
+    .
