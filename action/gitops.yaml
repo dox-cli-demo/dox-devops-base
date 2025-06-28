@@ -63,6 +63,11 @@ actions:
         clean' |
     yq -P > "${CLEANED_FILE}"
 
+    echo "______"
+    echo "cleaned-gitops-argocd-values.yaml"
+    cat "${CLEANED_FILE}"
+    echo "______"
+
     #------------------------ PROCESSING ------------------------#
     # Iterate through each application in CLEANED_FILE
     for app_name in $(yq eval '.applications[].name' $CLEANED_FILE); do
